@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+
+volumes:
+  ollama_data:
+  chroma_data:

@@ -1,0 +1,188 @@
+"""Shared search utilities with Tavily → Serper → Firecrawl fallback chain."""
+
+import json
+import os
+import time
+from dataclasses import dataclass, field
+from typing import Optional
+
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+@dataclass
+class SearchResult:
+    """A raw search hit from any source."""
+
+    title: str
+    url: str
+    snippet: str
+    source_api: str = ""
+
+
+@dataclass
+class RawCandidate:
+    """Lightweight raw search result before scoring/dedup."""
+
+    source: str
+    title: str
+    url: str
+    snippet: str
+    company: Optional[str] = None
+    raw_text: str = ""
+    tier: int = 1
+
+    def __post_init__(self):
+        if not self.raw_text:
+            self.raw_text = self.snippet
+
+
+_BLOCK_SIGNATURES = [
+    "captcha",
+    "cf-error",
+    "cloudflare",
+    "enable javascript",
+    "verify you are human",
+    "please turn javascript on",
+    "automated access",
+]
+
+_TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
+_SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
+_FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY", "")
+
+_TAVILY_URL = "https://api.tavily.com/search"
+_SERPER_URL = "https://google.serper.dev/search"
+_FIRECRAWL_SEARCH_URL = "https://api.firecrawl.dev/v1/search"
+
+
+def is_block_page(text: str) -> bool:
+    """Check if a response body indicates a bot block / CAPTCHA."""
+    lower = text.lower()
+    return any(sig in lower for sig in _BLOCK_SIGNATURES)
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+)
+async def _tavily_search(query: str, max_results: int = 10) -> list[SearchResult]:
+    """Search via Tavily API."""
+    if not _TAVILY_API_KEY or _TAVILY_API_KEY == "tvly-d...dCrl":
+        return []
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            _TAVILY_URL,
+            json={"api_key": _TAVILY_API_KEY, "query": query, "max_results": max_results},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        results = []
+        for r in data.get("results", []):
+            results.append(
+                SearchResult(
+                    title=r.get("title", ""),
+                    url=r.get("url", ""),
+                    snippet=r.get("content", ""),
+                    source_api="tavily",
+                )
+            )
+        return results
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+)
+async def _serper_search(query: str, max_results: int = 10) -> list[SearchResult]:
+    """Search via Serper (Google) API."""
+    if not _SERPER_API_KEY or _SERPER_API_KEY == "c0203d...09d0":
+        return []
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            _SERPER_URL,
+            json={"q": query, "num": max_results},
+            headers={"X-API-KEY": _SERPER_API_KEY},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        results = []
+        for r in data.get("organic", []):
+            results.append(
+                SearchResult(
+                    title=r.get("title", ""),
+                    url=r.get("link", ""),
+                    snippet=r.get("snippet", ""),
+                    source_api="serper",
+                )
+            )
+        return results
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+)
+async def _firecrawl_search(query: str, max_results: int = 10) -> list[SearchResult]:
+    """Search via Firecrawl API."""
+    if not _FIRECRAWL_API_KEY or _FIRECRAWL_API_KEY == "***":
+        return []
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            _FIRECRAWL_SEARCH_URL,
+            json={"query": query, "limit": max_results},
+            headers={"Authorization": f"Bearer {_FIRECRAWL_API_KEY}"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        results = []
+        for r in data.get("results", []):
+            results.append(
+                SearchResult(
+                    title=r.get("title", ""),
+                    url=r.get("url", ""),
+                    snippet=r.get("description", ""),
+                    source_api="firecrawl",
+                )
+            )
+        return results
+
+
+async def web_search(
+    query: str, max_results: int = 10
+) -> list[SearchResult]:
+    """Multi-API search with fallback chain: Tavily → Serper → Firecrawl."""
+    # Try Tavily first
+    results = await _tavily_search(query, max_results)
+    if results:
+        return results
+
+    # Fallback to Serper
+    results = await _serper_search(query, max_results)
+    if results:
+        return results
+
+    # Final fallback to Firecrawl
+    results = await _firecrawl_search(query, max_results)
+    return results
+
+
+async def fetch_url(url: str, timeout: int = 15) -> Optional[str]:
+    """Fetch a URL and return its text content (or None on failure)."""
+    try:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+            text = resp.text
+            if is_block_page(text):
+                return None
+            return text
+    except Exception:
+        return None

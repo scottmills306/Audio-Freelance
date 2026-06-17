@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# ChromaDB data
+leads/data/
+
+# Proposals (generated)
+proposals/
+
+# Frontend
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -1,0 +1,40 @@
+[project]
+name = "audio-dev-freelance-system"
+version = "0.1.0"
+description = "Automated freelance lead acquisition pipeline for audio DSP/plugin/realtime work"
+requires-python = ">=3.12"
+readme = "BUILD_PLAN.md"
+license = { text = "MIT" }
+authors = [{ name = "SGM", email = "scott@audio.dev" }]
+
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "chromadb>=0.6.0",
+    "langgraph>=0.2.0",
+    "pydantic>=2.0",
+    "httpx>=0.28.0",
+    "python-dotenv>=1.0",
+    "ollama>=0.4.0",
+    "pyyaml>=6.0",
+    "tenacity>=9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-mock>=3.14.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["leads*", "search*", "scoring*", "graph*", "api*", "generate*", "assets*", "debug*", "research*"]
