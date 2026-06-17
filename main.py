@@ -227,15 +227,16 @@ async def briefing():
     except Exception:
         pass
 
+    base_url = os.getenv("PUBLIC_URL", "http://localhost:8080")
     lines.append("")
     lines.append("─" * 60)
     lines.append("ACTIONS")
     lines.append("─" * 60)
     lines.append("")
-    lines.append("  Dashboard:    http://localhost:8080")
-    lines.append("  Prospect:     http://localhost:8080/api/v1/prospect/{niche}")
-    lines.append("  Market:       http://localhost:8080/api/v1/market")
-    lines.append("  Opportunities: http://localhost:8080/api/v1/market/opportunities")
+    lines.append(f"  Dashboard:    {base_url}")
+    lines.append(f"  Prospect:     {base_url}/api/v1/prospect/{{niche}}")
+    lines.append(f"  Market:       {base_url}/api/v1/market")
+    lines.append(f"  Opportunities: {base_url}/api/v1/market/opportunities")
     lines.append("")
     lines.append("  Saved files:")
     lines.append("    outreach/READY_TO_SEND.md — 8 application drafts")
@@ -252,7 +253,7 @@ async def dispatch_briefing():
     """Email the briefing to the configured address."""
     addr = os.getenv("BRIEFING_EMAIL", "")
     if not addr:
-        return {"error": "No BRIEFING_EMAIL set in .env. Add it like: BRIEFING_EMAIL=scott@sgmstudios.ca"}
+        return {"error": f"No BRIEFING_EMAIL set in .env. Add it like: BRIEFING_EMAIL=your@email.com"}
 
     # Build briefing text
     from leads.store import get_all_leads, get_leads_by_status

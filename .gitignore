@@ -21,8 +21,8 @@ frontend/node_modules/
 frontend/out/
 
 # Environment
-.env
-.env.local
+.env*
+!.env.example
 
 # OS
 .DS_Store
@@ -33,3 +33,10 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Keys and certificates
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx

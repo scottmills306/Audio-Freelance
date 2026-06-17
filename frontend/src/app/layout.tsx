@@ -45,9 +45,9 @@ function Sidebar() {
 
         <div className="pt-4 mt-4 border-t border-border">
           <p className="text-xs text-muted-foreground px-3 pb-1">System</p>
-          <NavItem href="http://localhost:8080/api/v1/health" label="API Health" external />
-          <NavItem href="http://localhost:8080/api/v1/debug" label="Diagnostics" external />
-          <NavItem href="http://localhost:8080/briefing" label="Daily Briefing" external />
+          <NavItem href="/api/v1/health" label="API Health" external />
+          <NavItem href="/api/v1/debug" label="Diagnostics" external />
+          <NavItem href="/briefing" label="Daily Briefing" external />
         </div>
       </div>
 
