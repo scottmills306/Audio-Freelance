@@ -4,8 +4,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
+from api.auth import require_api_key
 from leads.schema import Lead, LeadStatus, Verdict, PREFERRED_NICHES
 from leads.store import (
     get_lead_by_id,
@@ -21,10 +22,11 @@ from search.base import RawCandidate
 from graph.pipeline import run_pipeline
 from scoring.score import score_candidate
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
+public = APIRouter()  # no auth
 
 
-@router.get("/health")
+@public.get("/health")
 async def health_check():
     """Health check endpoint."""
     ollama_ok = check_ollama_available()
