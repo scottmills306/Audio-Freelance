@@ -10,7 +10,7 @@ Set API_KEY in .env to enable authentication for all non-public endpoints.
 
 import os
 
-from fastapi import Header, HTTPException, Depends
+from fastapi import Header, HTTPException
 
 
 async def require_api_key(authorization: str | None = Header(None)):

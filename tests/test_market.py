@@ -1,16 +1,16 @@
 """Tests for research/market.py — market intelligence module."""
 
-import pytest
-
 from research.market import (
-    MarketSignal,
     MarketReport,
-    TechTrend,
+    MarketSignal,
     PricingBenchmark,
-    _count_tech_mentions as _extract_tech_mentions,
-    extract_tech_trends,
-    extract_pricing_benchmarks,
+    TechTrend,
     _parse_rate,
+    extract_pricing_benchmarks,
+    extract_tech_trends,
+)
+from research.market import (
+    _count_tech_mentions as _extract_tech_mentions,
 )
 
 
@@ -65,10 +65,20 @@ class TestExtractTechMentions:
 class TestExtractTechTrends:
     def test_aggregates_mentions(self):
         signals = [
-            MarketSignal(category="tech_trend", source="test", title="CLAP gaining traction",
-                         url="https://x.com", snippet="CLAP plugin adoption growing"),
-            MarketSignal(category="tech_trend", source="test", title="More CLAP plugins",
-                         url="https://y.com", snippet="Another CLAP plugin released"),
+            MarketSignal(
+                category="tech_trend",
+                source="test",
+                title="CLAP gaining traction",
+                url="https://x.com",
+                snippet="CLAP plugin adoption growing",
+            ),
+            MarketSignal(
+                category="tech_trend",
+                source="test",
+                title="More CLAP plugins",
+                url="https://y.com",
+                snippet="Another CLAP plugin released",
+            ),
         ]
         trends = extract_tech_trends(signals)
         trends_dict = {t.technology: t for t in trends}
@@ -104,14 +114,20 @@ class TestParseRate:
 class TestExtractPricingBenchmarks:
     def test_plugin_dev_pricing(self):
         signals = [
-            MarketSignal(category="pricing", source="test",
-                         title="C++ DSP developer needed",
-                         url="https://x.com",
-                         snippet="Need a CLAP plugin developer. Budget $5,000."),
-            MarketSignal(category="pricing", source="test",
-                         title="VST3 contract",
-                         url="https://y.com",
-                         snippet="Looking for VST3 developer. Budget $3,000 - $8,000."),
+            MarketSignal(
+                category="pricing",
+                source="test",
+                title="C++ DSP developer needed",
+                url="https://x.com",
+                snippet="Need a CLAP plugin developer. Budget $5,000.",
+            ),
+            MarketSignal(
+                category="pricing",
+                source="test",
+                title="VST3 contract",
+                url="https://y.com",
+                snippet="Looking for VST3 developer. Budget $3,000 - $8,000.",
+            ),
         ]
         benchmarks = extract_pricing_benchmarks(signals)
         names = [b.niche for b in benchmarks]
@@ -129,8 +145,13 @@ class TestMarketReport:
     def test_with_data(self):
         r = MarketReport(
             signals=[
-                MarketSignal(category="funding", source="test",
-                             title="Test", url="https://x.com", snippet="test")
+                MarketSignal(
+                    category="funding",
+                    source="test",
+                    title="Test",
+                    url="https://x.com",
+                    snippet="test",
+                )
             ],
             tech_trends=[TechTrend(technology="CLAP", mention_count=3)],
             pricing_benchmarks=[PricingBenchmark(niche="plugin_dev", contract_range_max=5000)],

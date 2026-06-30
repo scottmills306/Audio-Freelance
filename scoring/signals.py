@@ -5,7 +5,7 @@ Patterns are case-insensitive by default.
 """
 
 import re
-from typing import Pattern
+from re import Pattern
 
 SignalDef = tuple[str, str, int]
 
@@ -29,7 +29,11 @@ POSITIVE_SIGNALS: list[tuple[str, Pattern[str], int]] = [
         8,
     ),
     _compile("rust_audio", r"\b(?:nih[\s-]?plug|clap[\s-]?rs|rust\s*audio|rust\s*plugin)\b", 6),
-    _compile("reaper_work", r"\b(?:reaper|reascript|reascripts|lua\s*script|sws\s*extension|custom\s*action|daw\s*automation|reaak|reapack)\b", 5),
+    _compile(
+        "reaper_work",
+        r"\b(?:reaper|reascript|reascripts|lua\s*script|sws\s*extension|custom\s*action|daw\s*automation|reaak|reapack)\b",
+        5,
+    ),
     _compile(
         "edge_inference",
         r"\b(?:on[\s-]?device|edge|cpu[\s-]?only|no\s*cloud|offline\s*inference)\b",

@@ -1,8 +1,11 @@
-"""Pipeline diagnostics: per-source connectivity, Chroma health, error logs, failure-mode remediation."""
+"""Pipeline diagnostics: connectivity, Chroma health, error logs, remediation.
+
+This module runs health checks against external services and reports actionable remediation steps.
+"""
 
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,9 +15,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 @dataclass
 class DiagnosticReport:
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(tz=timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(tz=UTC).isoformat())
     ollama_available: bool = False
     chroma_healthy: bool = False
     errors: list[str] = field(default_factory=list)
@@ -28,9 +29,10 @@ def run_diagnostics() -> dict:
     # 1. Check Ollama
     try:
         import ollama
+
         ollama.list()
         report.ollama_available = True
-    except Exception as e:
+    except Exception:
         report.ollama_available = False
         report.errors.append("Ollama unreachable")
         report.remediation.append("Start Ollama: `ollama serve` or check OLLAMA_HOST")
@@ -38,6 +40,7 @@ def run_diagnostics() -> dict:
     # 2. Check ChromaDB
     try:
         from chromadb import PersistentClient
+
         data_dir = Path(__file__).resolve().parent.parent / "leads" / "data" / "chroma"
         data_dir.mkdir(parents=True, exist_ok=True)
         client = PersistentClient(path=str(data_dir))
@@ -54,7 +57,8 @@ def run_diagnostics() -> dict:
         if not os.getenv(key, ""):
             missing.append(key)
     if missing:
-        report.remediation.append(f"Missing API keys: {', '.join(missing)}. Search will return 0 results.")
+        keys = ", ".join(missing)
+        report.remediation.append(f"Missing API keys: {keys}. Search will return 0 results.")
 
     return {
         "status": "degraded" if report.errors else "healthy",

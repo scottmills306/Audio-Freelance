@@ -1,12 +1,11 @@
 """Tests for leads/schema.py"""
 
 import uuid
-from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
 
-from leads.schema import Lead, LeadStatus, RawCandidate, Verdict, PREFERRED_NICHES
+from leads.schema import PREFERRED_NICHES, Lead, LeadStatus, RawCandidate
 
 
 class TestLeadModel:

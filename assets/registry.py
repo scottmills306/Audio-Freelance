@@ -4,11 +4,9 @@ Every generation function must load the registry and refuse to emit
 'shipped'-tier claims for any asset marked 'in_progress' or 'broken'.
 """
 
-import re
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -30,7 +28,7 @@ class AssetRegistry:
     def __init__(self, path: str | Path = _DEFAULT_REGISTRY_PATH):
         self.path = Path(path)
         self._assets: dict[str, Asset] = {}
-        self._loaded_at: Optional[datetime] = None
+        self._loaded_at: datetime | None = None
         self._load()
 
     def _load(self) -> None:
@@ -41,7 +39,7 @@ class AssetRegistry:
         with open(self.path) as f:
             data = yaml.safe_load(f)
 
-        self._loaded_at = datetime.now(tz=timezone.utc)
+        self._loaded_at = datetime.now(tz=UTC)
 
         if not data or "assets" not in data:
             self._assets = {}
@@ -57,7 +55,7 @@ class AssetRegistry:
             )
             self._assets[asset.id] = asset
 
-    def get(self, asset_id: str) -> Optional[Asset]:
+    def get(self, asset_id: str) -> Asset | None:
         return self._assets.get(asset_id)
 
     def all(self) -> dict[str, Asset]:
@@ -74,11 +72,12 @@ class AssetRegistry:
         return asset.status == "shipped"
 
     def status(self) -> str:
-        return f"Loaded {len(self._assets)} assets at {self._loaded_at.isoformat() if self._loaded_at else 'never'}"
+        when = self._loaded_at.isoformat() if self._loaded_at else "never"
+        return f"Loaded {len(self._assets)} assets at {when}"
 
 
 def load_registry(
-    path: Optional[str | Path] = None,
+    path: str | Path | None = None,
 ) -> AssetRegistry:
     """Convenience factory."""
     return AssetRegistry(path or _DEFAULT_REGISTRY_PATH)
@@ -96,11 +95,10 @@ def verify_draft_claims(
 
     # Find all asset IDs mentioned in the draft
     for asset_id, asset in registry.all().items():
-        if asset_id.lower() in draft_text.lower():
-            if not registry.is_safe_to_claim(asset_id):
-                violations.append(
-                    f"Asset '{asset_id}' is '{asset.status}' but draft references it as shipped. "
-                    f"Blocking until status is 'shipped'."
-                )
+        if asset_id.lower() in draft_text.lower() and not registry.is_safe_to_claim(asset_id):
+            violations.append(
+                f"Asset '{asset_id}' is '{asset.status}' but draft references it as shipped. "
+                f"Blocking until status is 'shipped'."
+            )
 
     return violations

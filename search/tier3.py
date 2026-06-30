@@ -1,12 +1,15 @@
 """Tier 3 — Niche/specialist communities with actual hiring posts."""
 
+import contextlib
+
 import httpx
+
 from search.base import RawCandidate, web_search
 
 QUERIES = {
     "plugin_dev": [
         '"The Audio Programmer" job OR contract OR hiring OR freelance audio plugin -discussion',
-        'site:audio.dev job OR hiring OR contract OR career -speaker -conference',
+        "site:audio.dev job OR hiring OR contract OR career -speaker -conference",
         '"music tech" OR "pro audio" "developer" OR "engineer" contract OR freelance OR hiring',
         '"audio plugin company" OR "plugin developer" hiring OR contract OR job',
     ],
@@ -43,7 +46,7 @@ async def _github_bounty_search() -> list[RawCandidate]:
         "sort": "updated",
     }
     candidates: list[RawCandidate] = []
-    try:
+    with contextlib.suppress(Exception):
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(url, params=params)
             resp.raise_for_status()
@@ -59,8 +62,6 @@ async def _github_bounty_search() -> list[RawCandidate]:
                         tier=3,
                     )
                 )
-    except Exception:
-        pass
     return candidates
 
 
@@ -77,12 +78,16 @@ async def run(niche: str) -> list[RawCandidate]:
                     seen_urls.add(r.url)
                     all_candidates.append(
                         RawCandidate(
-                            source=r.source_api, title=r.title,
-                            url=r.url, snippet=r.snippet,
-                            raw_text=r.snippet, tier=3,
+                            source=r.source_api,
+                            title=r.title,
+                            url=r.url,
+                            snippet=r.snippet,
+                            raw_text=r.snippet,
+                            tier=3,
                         )
                     )
-        except Exception:
+        except Exception:  # noqa: S112
+            # Ignore failed queries and continue with the next one
             continue
 
     for c in await _github_bounty_search():

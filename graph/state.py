@@ -1,6 +1,6 @@
 """Typed state for the LangGraph freelance pipeline."""
 
-from typing import TypedDict, Optional
+from typing import TypedDict
 
 from leads.schema import Lead
 from search.base import RawCandidate

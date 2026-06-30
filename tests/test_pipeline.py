@@ -2,9 +2,8 @@
 
 import pytest
 
+from graph.pipeline import build_pipeline, route_by_verdict, search_all
 from graph.state import PipelineState
-from graph.pipeline import build_pipeline, search_all, route_by_verdict
-from search.base import RawCandidate
 from leads.schema import Lead
 
 
@@ -28,11 +27,17 @@ def test_pipeline_state_type():
 
 def test_route_by_verdict_hot():
     state: PipelineState = {
-        "hot_leads": [Lead(
-            source="test", tier=1, title="Hot",
-            url="https://x.com", raw_text="test", niche="plugin_dev",
-            verdict="HOT",
-        )],
+        "hot_leads": [
+            Lead(
+                source="test",
+                tier=1,
+                title="Hot",
+                url="https://x.com",
+                raw_text="test",
+                niche="plugin_dev",
+                verdict="HOT",
+            )
+        ],
         "warm_leads": [],
     }
     assert route_by_verdict(state) == "hot_path"
@@ -41,11 +46,17 @@ def test_route_by_verdict_hot():
 def test_route_by_verdict_warm():
     state: PipelineState = {
         "hot_leads": [],
-        "warm_leads": [Lead(
-            source="test", tier=1, title="Warm",
-            url="https://x.com", raw_text="test", niche="plugin_dev",
-            verdict="WARM",
-        )],
+        "warm_leads": [
+            Lead(
+                source="test",
+                tier=1,
+                title="Warm",
+                url="https://x.com",
+                raw_text="test",
+                niche="plugin_dev",
+                verdict="WARM",
+            )
+        ],
     }
     assert route_by_verdict(state) == "warm_path"
 
@@ -54,11 +65,17 @@ def test_route_by_verdict_cold():
     state: PipelineState = {
         "hot_leads": [],
         "warm_leads": [],
-        "cold_leads": [Lead(
-            source="test", tier=1, title="Cold",
-            url="https://x.com", raw_text="test", niche="plugin_dev",
-            verdict="COLD",
-        )],
+        "cold_leads": [
+            Lead(
+                source="test",
+                tier=1,
+                title="Cold",
+                url="https://x.com",
+                raw_text="test",
+                niche="plugin_dev",
+                verdict="COLD",
+            )
+        ],
     }
     assert route_by_verdict(state) == "cold_path"
 

@@ -1,30 +1,26 @@
 """FastAPI route definitions for the freelance acquisition system."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from api.auth import require_api_key
-from leads.schema import Lead, LeadStatus, Verdict, PREFERRED_NICHES
+from debug.log import setup_logger
+from graph.pipeline import run_pipeline
+from leads.schema import PREFERRED_NICHES, LeadStatus
 from leads.store import (
+    check_ollama_available,
+    get_all_leads,
     get_lead_by_id,
     get_leads_by_status,
     update_status,
     upsert_lead,
-    search_leads,
-    get_all_leads,
-    delete_lead,
-    check_ollama_available,
 )
-from search.base import RawCandidate
-from graph.pipeline import run_pipeline
 from scoring.score import score_candidate
+from search.base import RawCandidate
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 public = APIRouter()  # no auth
-
-from debug.log import setup_logger
 
 log = setup_logger(__name__)
 
@@ -36,12 +32,12 @@ async def health_check():
     return {
         "status": "ok",
         "ollama": ollama_ok,
-        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "timestamp": datetime.now(tz=UTC).isoformat(),
     }
 
 
 @router.get("/leads")
-async def list_leads(status: Optional[str] = None):
+async def list_leads(status: str | None = None):
     """List leads, optionally filtered by status."""
     if status:
         try:
@@ -110,16 +106,15 @@ async def prospect_niche(niche: str):
             "cold": len(result.get("cold_leads", [])),
             "skipped": len(result.get("skipped_leads", [])),
             "errors": result.get("errors", []),
-            "hot_leads": [
-                lead.model_dump(mode="json") for lead in result.get("hot_leads", [])
-            ],
-            "warm_leads": [
-                lead.model_dump(mode="json") for lead in result.get("warm_leads", [])
-            ],
+            "hot_leads": [lead.model_dump(mode="json") for lead in result.get("hot_leads", [])],
+            "warm_leads": [lead.model_dump(mode="json") for lead in result.get("warm_leads", [])],
         }
     except Exception as e:
         log.warning("Pipeline failed", extra={"niche": niche, "error": e})
-        raise HTTPException(status_code=500, detail="Pipeline processing failed. Check server logs.")
+        raise HTTPException(
+            status_code=500,
+            detail="Pipeline processing failed. Check server logs.",
+        )
 
 
 @router.post("/score")
@@ -129,7 +124,7 @@ async def score_manual(
     url: str,
     snippet: str,
     niche: str = "plugin_contract",
-    company: Optional[str] = None,
+    company: str | None = None,
 ):
     """Manually score a single raw candidate."""
     if niche not in PREFERRED_NICHES:
@@ -230,7 +225,7 @@ async def pipeline_status():
     return {
         "lead_counts": counts,
         "ollama_available": check_ollama_available(),
-        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "timestamp": datetime.now(tz=UTC).isoformat(),
     }
 
 

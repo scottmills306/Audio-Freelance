@@ -1,18 +1,15 @@
 """Main scoring pipeline: candidate → scored lead with verdict."""
 
 import re
-import uuid
-from datetime import datetime, timezone
-from typing import Optional
 
-from leads.schema import Lead, LeadStatus, Verdict, PREFERRED_NICHES
-from search.base import RawCandidate
+from leads.schema import Lead, LeadStatus, Verdict
 from scoring.signals import (
+    NEGATIVE_SIGNALS,
+    POSITIVE_SIGNALS,
     check_hard_skip,
     extract_signals,
-    POSITIVE_SIGNALS,
-    NEGATIVE_SIGNALS,
 )
+from search.base import RawCandidate
 
 # Lowered thresholds for real-world job market
 _HOT_THRESHOLD = 10
@@ -21,7 +18,7 @@ _MIN_RATE_CAD = 3000
 _HOURLY_FLOOR_CAD = 150
 
 
-def _parse_budget(text: str) -> Optional[int]:
+def _parse_budget(text: str) -> int | None:
     patterns = [
         r"\$\s*((?:\d{4,10}|\d{1,3}(?:,\d{3})*))(?:\.\d{2})?\s*(?:cad|usd)?",
         r"(\d{4,5})\s*(?:cad|usd|dollars)",
@@ -49,11 +46,17 @@ def score_candidate(
     # Step 1: Hard skip
     if check_hard_skip(combined_text):
         return Lead(
-            source=candidate.source, tier=candidate.tier,
-            title=candidate.title, company=candidate.company,
-            url=candidate.url, raw_text=candidate.raw_text,
-            niche=niche, signals={"hard_skip": -999},
-            score=0, verdict="SKIP", status=LeadStatus.SKIPPED,
+            source=candidate.source,
+            tier=candidate.tier,
+            title=candidate.title,
+            company=candidate.company,
+            url=candidate.url,
+            raw_text=candidate.raw_text,
+            niche=niche,
+            signals={"hard_skip": -999},
+            score=0,
+            verdict="SKIP",
+            status=LeadStatus.SKIPPED,
         )
 
     # Step 2: Extract signals
@@ -88,9 +91,15 @@ def score_candidate(
         status = LeadStatus.SKIPPED
 
     return Lead(
-        source=candidate.source, tier=candidate.tier,
-        title=candidate.title, company=candidate.company,
-        url=candidate.url, raw_text=candidate.raw_text,
-        niche=niche, signals=signals, score=total,
-        verdict=verdict, status=status,
+        source=candidate.source,
+        tier=candidate.tier,
+        title=candidate.title,
+        company=candidate.company,
+        url=candidate.url,
+        raw_text=candidate.raw_text,
+        niche=niche,
+        signals=signals,
+        score=total,
+        verdict=verdict,
+        status=status,
     )

@@ -2,10 +2,6 @@
 
 from scoring.signals import (
     check_hard_skip,
-    extract_signals,
-    POSITIVE_SIGNALS,
-    NEGATIVE_SIGNALS,
-    HARD_SKIP_KEYWORDS,
 )
 
 
@@ -20,9 +16,7 @@ class TestCheckHardSkip:
         assert check_hard_skip("This is an unpaid internship")
 
     def test_no_skip_legitimate(self):
-        assert not check_hard_skip(
-            "We are looking for a C++ DSP developer, $5000 contract"
-        )
+        assert not check_hard_skip("We are looking for a C++ DSP developer, $5000 contract")
 
     def test_skip_for_exposure(self):
         assert check_hard_skip("Great opportunity for exposure")

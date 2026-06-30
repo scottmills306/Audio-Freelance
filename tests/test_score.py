@@ -1,8 +1,8 @@
 """Tests for scoring/score.py — the main scoring pipeline."""
 
-from leads.schema import Lead, LeadStatus
-from search.base import RawCandidate
+from leads.schema import LeadStatus
 from scoring.score import score_candidate
+from search.base import RawCandidate
 
 
 class TestScoreCandidate:
@@ -12,7 +12,10 @@ class TestScoreCandidate:
             source="test",
             title="ML Audio Engineer needed for CLAP plugin",
             url="https://example.com/job1",
-            snippet="Looking for C++ DSP developer with Mamba/SSM experience for real-time audio plugin. Remote OK. Budget $5000.",
+            snippet=(
+                "Looking for C++ DSP developer with Mamba/SSM experience "
+                "for real-time audio plugin. Remote OK. Budget $5000."
+            ),
             tier=1,
         )
         lead = score_candidate(c, "plugin_dev")

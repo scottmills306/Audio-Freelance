@@ -1,15 +1,11 @@
 """Shared search utilities with Tavily → Serper → Firecrawl fallback chain."""
 
-import json
 import os
-import time
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 from dotenv import load_dotenv
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 load_dotenv()
 
@@ -32,7 +28,7 @@ class RawCandidate:
     title: str
     url: str
     snippet: str
-    company: Optional[str] = None
+    company: str | None = None
     raw_text: str = ""
     tier: int = 1
 
@@ -66,9 +62,8 @@ def _is_key_valid(key: str, min_len: int = 20) -> bool:
         return False
     # Catch repeated characters used as fillers
     unique = len(set(key))
-    if unique < 5:
-        return False
-    return True
+    return not unique < 5
+
 
 _TAVILY_URL = "https://api.tavily.com/search"
 _SERPER_URL = "https://google.serper.dev/search"
@@ -90,24 +85,27 @@ async def _tavily_search(query: str, max_results: int = 10) -> list[SearchResult
     if not _is_key_valid(_TAVILY_API_KEY, min_len=20):
         return []
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            _TAVILY_URL,
-            json={"api_key": _TAVILY_API_KEY, "query": query, "max_results": max_results},
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        results = []
-        for r in data.get("results", []):
-            results.append(
-                SearchResult(
-                    title=r.get("title", ""),
-                    url=r.get("url", ""),
-                    snippet=r.get("content", ""),
-                    source_api="tavily",
-                )
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                _TAVILY_URL,
+                json={"api_key": _TAVILY_API_KEY, "query": query, "max_results": max_results},
             )
-        return results
+            resp.raise_for_status()
+            data = resp.json()
+            results = []
+            for r in data.get("results", []):
+                results.append(
+                    SearchResult(
+                        title=r.get("title", ""),
+                        url=r.get("url", ""),
+                        snippet=r.get("content", ""),
+                        source_api="tavily",
+                    )
+                )
+            return results
+    except Exception:
+        return []
 
 
 @retry(
@@ -119,25 +117,28 @@ async def _serper_search(query: str, max_results: int = 10) -> list[SearchResult
     if not _is_key_valid(_SERPER_API_KEY, min_len=20):
         return []
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            _SERPER_URL,
-            json={"q": query, "num": max_results},
-            headers={"X-API-KEY": _SERPER_API_KEY},
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        results = []
-        for r in data.get("organic", []):
-            results.append(
-                SearchResult(
-                    title=r.get("title", ""),
-                    url=r.get("link", ""),
-                    snippet=r.get("snippet", ""),
-                    source_api="serper",
-                )
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                _SERPER_URL,
+                json={"q": query, "num": max_results},
+                headers={"X-API-KEY": _SERPER_API_KEY},
             )
-        return results
+            resp.raise_for_status()
+            data = resp.json()
+            results = []
+            for r in data.get("organic", []):
+                results.append(
+                    SearchResult(
+                        title=r.get("title", ""),
+                        url=r.get("link", ""),
+                        snippet=r.get("snippet", ""),
+                        source_api="serper",
+                    )
+                )
+            return results
+    except Exception:
+        return []
 
 
 @retry(
@@ -149,30 +150,31 @@ async def _firecrawl_search(query: str, max_results: int = 10) -> list[SearchRes
     if not _is_key_valid(_FIRECRAWL_API_KEY, min_len=20):
         return []
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            _FIRECRAWL_SEARCH_URL,
-            json={"query": query, "limit": max_results},
-            headers={"Authorization": f"Bearer {_FIRECRAWL_API_KEY}"},
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        results = []
-        for r in data.get("results", []):
-            results.append(
-                SearchResult(
-                    title=r.get("title", ""),
-                    url=r.get("url", ""),
-                    snippet=r.get("description", ""),
-                    source_api="firecrawl",
-                )
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                _FIRECRAWL_SEARCH_URL,
+                json={"query": query, "limit": max_results},
+                headers={"Authorization": f"Bearer {_FIRECRAWL_API_KEY}"},
             )
-        return results
+            resp.raise_for_status()
+            data = resp.json()
+            results = []
+            for r in data.get("results", []):
+                results.append(
+                    SearchResult(
+                        title=r.get("title", ""),
+                        url=r.get("url", ""),
+                        snippet=r.get("description", ""),
+                        source_api="firecrawl",
+                    )
+                )
+            return results
+    except Exception:
+        return []
 
 
-async def web_search(
-    query: str, max_results: int = 10
-) -> list[SearchResult]:
+async def web_search(query: str, max_results: int = 10) -> list[SearchResult]:
     """Multi-API search with fallback chain: Tavily → Serper → Firecrawl."""
     # Try Tavily first
     results = await _tavily_search(query, max_results)
@@ -189,7 +191,7 @@ async def web_search(
     return results
 
 
-async def fetch_url(url: str, timeout: int = 15) -> Optional[str]:
+async def fetch_url(url: str, timeout: int = 15) -> str | None:
     """Fetch a URL and return its text content (or None on failure)."""
     try:
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:

@@ -2,28 +2,30 @@
 """FastAPI entry point — serves dashboard + API + briefing dispatch."""
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from string import Template
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+
+from api.routes import public, router
 
 # Load .env before anything else
 env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(env_path)
 
-from api.routes import router, public
-
 # ── Startup checks ──
 _api_key = os.getenv("API_KEY", "")
 if not _api_key:
     import warnings
+
     warnings.warn(
         "⚠ API_KEY not set. All API endpoints are unprotected. "
         "Set API_KEY in .env for production deployments."
@@ -48,7 +50,9 @@ if extra:
 
 app = FastAPI(
     title="Audio-Dev Freelance Acquisition System",
-    description="Automated multi-tier lead sourcing, scoring, outreach, and market intelligence pipeline.",
+    description=(
+        "Automated multi-tier lead sourcing, scoring, outreach, and market intelligence pipeline."
+    ),
     version="0.1.0",
 )
 
@@ -65,3 +69,57 @@ app.add_middleware(
 
 app.include_router(public, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1")
+
+
+# ── Daily Briefing HTML page ──
+
+
+@app.get("/briefing", response_class=HTMLResponse)
+async def daily_briefing():
+    """Rendered HTML daily briefing: lead counts, pipeline status, quick actions."""
+    from leads.schema import LeadStatus
+    from leads.store import check_ollama_available, get_all_leads
+
+    leads = get_all_leads()
+    counts: dict[str, int] = {}
+    for s in LeadStatus:
+        counts[s.value] = sum(1 for lead in leads if lead.status == s)
+
+    total = len(leads)
+    hot = counts.get("HOT", 0)
+    warm = counts.get("WARM", 0)
+    cold = counts.get("COLD", 0)
+    contacted = counts.get("CONTACTED", 0)
+    won = counts.get("WON", 0)
+
+    ollama_ok = check_ollama_available()
+    now = datetime.now(tz=UTC).strftime("%Y-%m-%d %H:%M UTC")
+
+    template_path = Path(__file__).resolve().parent / "templates" / "briefing.html"
+    html = Template(template_path.read_text()).substitute(
+        total=total,
+        hot=hot,
+        warm=warm,
+        cold=cold,
+        contacted=contacted,
+        won=won,
+        now=now,
+        ollama_class="green" if ollama_ok else "red",
+        ollama_status="reachable" if ollama_ok else "unreachable",
+    )
+
+    return HTMLResponse(content=html, media_type="text/html")
+
+
+# ── Startup ──
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "main:app",
+        host=os.getenv("HOST", "127.0.0.1"),
+        port=int(os.getenv("PORT", "8080")),
+        log_level="info",
+        reload=False,
+    )

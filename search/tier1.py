@@ -65,17 +65,40 @@ QUERIES = {
 }
 
 _FORUM_NOISE = [
-    "discussion", "how to", "tutorial", "what is", "anyone else",
-    "question", "help with", "thoughts on", "opinion", "should i",
-    "vs", "versus", "which is better", "recommend", "suggestion",
+    "discussion",
+    "how to",
+    "tutorial",
+    "what is",
+    "anyone else",
+    "question",
+    "help with",
+    "thoughts on",
+    "opinion",
+    "should i",
+    "vs",
+    "versus",
+    "which is better",
+    "recommend",
+    "suggestion",
 ]
 
 
 def _is_forum_noise(text: str) -> bool:
     lower = text.lower()
-    hiring_signals = ["hiring", "contract", "freelance", "paid", "job",
-                       "commission", "looking for", "we need", "we are looking",
-                       "budget", "rate", "$"]
+    hiring_signals = [
+        "hiring",
+        "contract",
+        "freelance",
+        "paid",
+        "job",
+        "commission",
+        "looking for",
+        "we need",
+        "we are looking",
+        "budget",
+        "rate",
+        "$",
+    ]
     has_hiring = any(s in lower for s in hiring_signals)
     if has_hiring:
         return False
@@ -107,7 +130,8 @@ async def run(niche: str) -> list[RawCandidate]:
                             tier=1,
                         )
                     )
-        except Exception:
+        except Exception:  # noqa: S112
+            # Ignore failed queries and continue with the next one
             continue
 
     return all_candidates

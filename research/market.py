@@ -7,15 +7,19 @@ Architecture:
 
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from research.sources import (
-    FUNDING_QUERIES, TREND_QUERIES, LAUNCH_QUERIES, PRICING_QUERIES, HIRING_QUERIES,
-    GITHUB_TOPICS, TRACKED_TECHNOLOGIES, PRICING_EXCLUDE_PATTERNS,
-    search_web, search_github,
+    FUNDING_QUERIES,
+    HIRING_QUERIES,
+    LAUNCH_QUERIES,
+    PRICING_EXCLUDE_PATTERNS,
+    PRICING_QUERIES,
+    TRACKED_TECHNOLOGIES,
+    TREND_QUERIES,
+    search_github,
+    search_web,
 )
-
 
 # ── Data types ──
 
@@ -52,9 +56,7 @@ class PricingBenchmark:
 
 @dataclass
 class MarketReport:
-    scanned_at: str = field(
-        default_factory=lambda: datetime.now(tz=timezone.utc).isoformat()
-    )
+    scanned_at: str = field(default_factory=lambda: datetime.now(tz=UTC).isoformat())
     signals: list[MarketSignal] = field(default_factory=list)
     tech_trends: list[TechTrend] = field(default_factory=list)
     pricing_benchmarks: list[PricingBenchmark] = field(default_factory=list)
@@ -90,11 +92,14 @@ def extract_tech_trends(signals: list[MarketSignal]) -> list[TechTrend]:
 
     trends = []
     for tech, count in sorted(mention_counts.items(), key=lambda x: -x[1]):
-        trends.append(TechTrend(
-            technology=tech, mention_count=count,
-            contexts=contexts.get(tech, []),
-            direction="rising" if count >= 3 else "stable",
-        ))
+        trends.append(
+            TechTrend(
+                technology=tech,
+                mention_count=count,
+                contexts=contexts.get(tech, []),
+                direction="rising" if count >= 3 else "stable",
+            )
+        )
     return trends
 
 
@@ -105,7 +110,7 @@ def _is_price_noise(text: str) -> bool:
     return any(re.search(p, text, re.IGNORECASE) for p in PRICING_EXCLUDE_PATTERNS)
 
 
-def _parse_rate(text: str) -> Optional[tuple[int, int]]:
+def _parse_rate(text: str) -> tuple[int, int] | None:
     """Extract (min, max) rate from text. Filters marketplace noise."""
     if _is_price_noise(text):
         return None
@@ -162,13 +167,16 @@ def extract_pricing_benchmarks(signals: list[MarketSignal]) -> list[PricingBench
             if 0 < lo < hi and hi / lo < 5:
                 hours.append(lo // 20)
                 hours.append(hi // 80)
-        benchmarks.append(PricingBenchmark(
-            niche=niche,
-            contract_range_min=min(mins), contract_range_max=max(maxs),
-            hourly_min=min(hours) if hours else 0,
-            hourly_max=max(hours) if hours else 0,
-            sample_count=len(rates),
-        ))
+        benchmarks.append(
+            PricingBenchmark(
+                niche=niche,
+                contract_range_min=min(mins),
+                contract_range_max=max(maxs),
+                hourly_min=min(hours) if hours else 0,
+                hourly_max=max(hours) if hours else 0,
+                sample_count=len(rates),
+            )
+        )
 
     return benchmarks
 
@@ -243,8 +251,11 @@ async def run_market_scan() -> MarketReport:
     summary = " | ".join(parts) if parts else "Scan complete."
 
     return MarketReport(
-        signals=unique, tech_trends=trends, pricing_benchmarks=pricing,
-        hot_opportunities=opportunities, summary=summary,
+        signals=unique,
+        tech_trends=trends,
+        pricing_benchmarks=pricing,
+        hot_opportunities=opportunities,
+        summary=summary,
     )
 
 
@@ -255,20 +266,35 @@ async def generate_report() -> dict:
         "summary": report.summary,
         "total_signals": len(report.signals),
         "signals": [
-            {"category": s.category, "source": s.source, "title": s.title,
-             "url": s.url, "snippet": s.snippet[:200], "relevance": s.relevance_score,
-             "tags": s.tags}
+            {
+                "category": s.category,
+                "source": s.source,
+                "title": s.title,
+                "url": s.url,
+                "snippet": s.snippet[:200],
+                "relevance": s.relevance_score,
+                "tags": s.tags,
+            }
             for s in sorted(report.signals, key=lambda x: -x.relevance_score)[:50]
         ],
         "tech_trends": [
-            {"technology": t.technology, "mentions": t.mention_count,
-             "direction": t.direction, "contexts": t.contexts}
+            {
+                "technology": t.technology,
+                "mentions": t.mention_count,
+                "direction": t.direction,
+                "contexts": t.contexts,
+            }
             for t in sorted(report.tech_trends, key=lambda x: -x.mention_count)
         ],
         "pricing_benchmarks": [
-            {"niche": p.niche, "contract_range_min": p.contract_range_min,
-             "contract_range_max": p.contract_range_max, "hourly_min": p.hourly_min,
-             "hourly_max": p.hourly_max, "sample_count": p.sample_count}
+            {
+                "niche": p.niche,
+                "contract_range_min": p.contract_range_min,
+                "contract_range_max": p.contract_range_max,
+                "hourly_min": p.hourly_min,
+                "hourly_max": p.hourly_max,
+                "sample_count": p.sample_count,
+            }
             for p in sorted(report.pricing_benchmarks, key=lambda x: -x.contract_range_max)
         ],
         "hot_opportunities": report.hot_opportunities,

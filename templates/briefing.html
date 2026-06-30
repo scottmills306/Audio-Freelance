@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Briefing — Audio Freelance Acquisition</title>
+<style>
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #0a0a0f;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 2rem;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .subtitle { color: #888; font-size: 0.85rem; margin-bottom: 2rem; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    background: #14141e;
+    border: 1px solid #2a2a3a;
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+  .card .label {
+    color: #777;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .card .value { font-size: 2rem; font-weight: 700; line-height: 1.2; }
+  .hot { color: #ef4444; }
+  .warm { color: #f59e0b; }
+  .cold { color: #3b82f6; }
+  .won { color: #22c55e; }
+  .neutral { color: #a0a0b0; }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    font-size: 0.85rem;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.green { background: #22c55e; }
+  .dot.red { background: #ef4444; }
+  .actions {
+    margin-top: 2rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .actions a {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: #1e1e2e;
+    border: 1px solid #2a2a3a;
+    border-radius: 6px;
+    color: #a0a0b0;
+    text-decoration: none;
+    font-size: 0.85rem;
+  }
+  .actions a:hover {
+    background: #25253a;
+    color: #e0e0e0;
+    border-color: #444;
+  }
+</style>
+</head>
+<body>
+<h1>◆ Daily Briefing</h1>
+<p class="subtitle">Generated $now</p>
+
+<div class="grid">
+  <div class="card">
+    <div class="label">Total Leads</div>
+    <div class="value neutral">$total</div>
+  </div>
+  <div class="card">
+    <div class="label">Hot</div>
+    <div class="value hot">$hot</div>
+  </div>
+  <div class="card">
+    <div class="label">Warm</div>
+    <div class="value warm">$warm</div>
+  </div>
+  <div class="card">
+    <div class="label">Cold</div>
+    <div class="value cold">$cold</div>
+  </div>
+  <div class="card">
+    <div class="label">Contacted</div>
+    <div class="value neutral">$contacted</div>
+  </div>
+  <div class="card">
+    <div class="label">Won</div>
+    <div class="value won">$won</div>
+  </div>
+</div>
+
+<div class="status">
+  <span class="dot $ollama_class"></span>
+  Ollama: $ollama_status
+</div>
+
+<div class="actions">
+  <a href="/api/v1/health">API Health</a>
+  <a href="/api/v1/status">Pipeline Status</a>
+  <a href="/api/v1/debug">Diagnostics</a>
+  <a href="/leads">Leads Dashboard</a>
+  <a href="/market">Market Intel</a>
+</div>
+</body>
+</html>

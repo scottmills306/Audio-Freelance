@@ -1,7 +1,7 @@
 """Outreach draft generator with templates A-D and asset-registry claim validation."""
 
-from datetime import datetime, timezone
-from typing import Optional
+import contextlib
+from datetime import UTC, datetime
 
 from assets.registry import AssetRegistry, load_registry, verify_draft_claims
 from leads.schema import Lead
@@ -76,7 +76,7 @@ P.S. {benchmark_link}""",
 def generate_outreach(
     lead: Lead,
     template_key: str = "A_plugin_contract",
-    context: Optional[dict] = None,
+    context: dict | None = None,
 ) -> dict:
     """Generate an outreach draft for a lead using the specified template.
 
@@ -89,8 +89,7 @@ def generate_outreach(
     template = TEMPLATES.get(template_key)
     if template is None:
         raise ValueError(
-            f"Unknown template '{template_key}'. "
-            f"Available: {', '.join(TEMPLATES.keys())}"
+            f"Unknown template '{template_key}'. Available: {', '.join(TEMPLATES.keys())}"
         )
 
     # Fill template with context
@@ -104,20 +103,18 @@ def generate_outreach(
         "lead_id": str(lead.id),
         "template": template_key,
         "draft": draft,
-        "generated_at": datetime.now(tz=timezone.utc).isoformat(),
+        "generated_at": datetime.now(tz=UTC).isoformat(),
         "violations": violations,
         "safe_to_send": len(violations) == 0,
     }
 
     # Log to ChromaDB outreach collection
-    try:
+    with contextlib.suppress(Exception):
         log_outreach(
             lead_id=str(lead.id),
             template_used=template_key,
             draft_text=draft,
             status="BLOCKED" if violations else "DRAFTED",
         )
-    except Exception:
-        pass
 
     return result

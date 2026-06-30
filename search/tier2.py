@@ -1,13 +1,16 @@
 """Tier 2 — Weekly: broad remote/freelance platforms and HN."""
 
+import contextlib
+
 import httpx
+
 from search.base import RawCandidate, web_search
 
 QUERIES = {
     "plugin_dev": [
         'site:weworkremotely.com audio OR DSP OR "audio plugin"',
-        'site:remoteok.com audio dsp plugin',
-        'site:wellfound.com audio dsp contract',
+        "site:remoteok.com audio dsp plugin",
+        "site:wellfound.com audio dsp contract",
         '"audio plugin developer" OR "dsp engineer" remote contract OR freelance OR hiring',
     ],
     "reaper_scripts": [
@@ -16,9 +19,9 @@ QUERIES = {
         '"reaper developer" OR "reascript" OR "daw script" contract OR freelance OR remote',
     ],
     "rust_audio": [
-        'site:remoteok.com rust audio developer',
-        'site:weworkremotely.com rust audio OR dsp',
-        'site:wellfound.com rust audio contract',
+        "site:remoteok.com rust audio developer",
+        "site:weworkremotely.com rust audio OR dsp",
+        "site:wellfound.com rust audio contract",
         '"rust audio developer" OR "rust dsp" remote OR contract OR job',
     ],
     "audio_ml": [
@@ -44,14 +47,14 @@ async def _hn_algolia_search() -> list[RawCandidate]:
         "hitsPerPage": 30,
     }
     candidates: list[RawCandidate] = []
-    try:
+    with contextlib.suppress(Exception):
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(url, params=params)
             resp.raise_for_status()
             data = resp.json()
             for hit in data.get("hits", []):
                 story_title = (hit.get("story_title", "") or "").lower()
-                comment_text = (hit.get("comment_text", "") or "")
+                comment_text = hit.get("comment_text", "") or ""
                 if "who is hiring" in story_title:
                     lower = comment_text.lower()
                     if any(kw in lower for kw in ["contract", "freelance", "part-time", "remote"]):
@@ -65,8 +68,6 @@ async def _hn_algolia_search() -> list[RawCandidate]:
                                 tier=2,
                             )
                         )
-    except Exception:
-        pass
     return candidates
 
 
@@ -83,12 +84,16 @@ async def run(niche: str) -> list[RawCandidate]:
                     seen_urls.add(r.url)
                     all_candidates.append(
                         RawCandidate(
-                            source=r.source_api, title=r.title,
-                            url=r.url, snippet=r.snippet,
-                            raw_text=r.snippet, tier=2,
+                            source=r.source_api,
+                            title=r.title,
+                            url=r.url,
+                            snippet=r.snippet,
+                            raw_text=r.snippet,
+                            tier=2,
                         )
                     )
-        except Exception:
+        except Exception:  # noqa: S112
+            # Ignore failed queries and continue with the next one
             continue
 
     hn = await _hn_algolia_search()

@@ -4,12 +4,10 @@ Each source module provides query lists and async functions that return MarketSi
 """
 
 import os
-from typing import Optional
 
 import httpx
 
 from search.base import web_search
-
 
 # ── Query catalog ──
 
@@ -18,7 +16,7 @@ FUNDING_QUERIES = [
     '"audio startup" OR "music tech startup" raised OR funding OR "series" OR seed',
     '"audio plugin" OR "VST" OR "CLAP" company funding OR acquisition OR raised',
     '"game audio" OR "audio middleware" OR "wwise" OR "fmod" funding OR acquisition',
-    'site:ycombinator.com companies audio OR music OR speech OR sound',
+    "site:ycombinator.com companies audio OR music OR speech OR sound",
 ]
 
 TREND_QUERIES = [
@@ -54,9 +52,18 @@ HIRING_QUERIES = [
 ]
 
 GITHUB_TOPICS = [
-    "audio", "dsp", "plugin", "clap", "vst", "reaper",
-    "music-information-retrieval", "audio-processing", "neural-audio",
-    "music-ai", "audio-engine", "real-time-audio",
+    "audio",
+    "dsp",
+    "plugin",
+    "clap",
+    "vst",
+    "reaper",
+    "music-information-retrieval",
+    "audio-processing",
+    "neural-audio",
+    "music-ai",
+    "audio-engine",
+    "real-time-audio",
 ]
 
 TRACKED_TECHNOLOGIES = {
@@ -116,7 +123,8 @@ async def search_web(
                             tags=[tag],
                         )
                     )
-        except Exception:
+        except Exception:  # noqa: S112
+            # Ignore failed queries and continue with the next one
             continue
 
     return signals
@@ -153,11 +161,14 @@ async def search_github() -> list["MarketSignal"]:  # noqa: F821
                             title=item.get("full_name", ""),
                             url=item.get("html_url", ""),
                             snippet=desc,
-                            relevance_score=min(10, max(1, int(item.get("stargazers_count", 0) / 100))),
+                            relevance_score=min(
+                                10, max(1, int(item.get("stargazers_count", 0) / 100))
+                            ),
                             tags=[topic, "open_source"],
                         )
                     )
-        except Exception:
+        except Exception:  # noqa: S112
+            # Ignore failed queries and continue with the next one
             continue
 
     return signals

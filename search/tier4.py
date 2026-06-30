@@ -32,7 +32,7 @@ TIER_4_QUERIES = {
     ],
     "rust_audio": [
         '"rust" "audio" company OR startup hiring OR jobs OR careers',
-        'site:ycombinator.com/companies rust audio',
+        "site:ycombinator.com/companies rust audio",
         '"audio tooling" OR "audio infrastructure" rust hiring OR jobs',
     ],
     "audio_ml": [
@@ -52,18 +52,23 @@ async def _company_careers_search() -> list[RawCandidate]:
     for name, domain in SEED_COMPANIES:
         try:
             results = await web_search(
-                f'site:{domain} careers OR jobs OR contract OR freelance',
+                f"site:{domain} careers OR jobs OR contract OR freelance",
                 max_results=3,
             )
             for r in results:
                 candidates.append(
                     RawCandidate(
-                        source="company_careers", title=r.title,
-                        url=r.url, snippet=r.snippet,
-                        company=name, raw_text=r.snippet, tier=4,
+                        source="company_careers",
+                        title=r.title,
+                        url=r.url,
+                        snippet=r.snippet,
+                        company=name,
+                        raw_text=r.snippet,
+                        tier=4,
                     )
                 )
-        except Exception:
+        except Exception:  # noqa: S112
+            # Ignore failed queries and continue with the next one
             continue
     return candidates
 
@@ -81,12 +86,16 @@ async def run(niche: str) -> list[RawCandidate]:
                     seen_urls.add(r.url)
                     all_candidates.append(
                         RawCandidate(
-                            source=r.source_api, title=r.title,
-                            url=r.url, snippet=r.snippet,
-                            raw_text=r.snippet, tier=4,
+                            source=r.source_api,
+                            title=r.title,
+                            url=r.url,
+                            snippet=r.snippet,
+                            raw_text=r.snippet,
+                            tier=4,
                         )
                     )
-        except Exception:
+        except Exception:  # noqa: S112
+            # Ignore failed queries and continue with the next one
             continue
 
     for c in await _company_careers_search():

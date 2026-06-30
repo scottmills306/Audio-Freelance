@@ -4,23 +4,20 @@ These tests require Ollama to be running with 'nomic-embed-text' pulled.
 If Ollama is not available, tests are skipped.
 """
 
-import uuid
-
 import pytest
 
 from leads.schema import Lead, LeadStatus
 from leads.store import (
-    embed_text,
     check_ollama_available,
-    ensure_collections_initialized,
-    upsert_lead,
-    get_lead_by_id,
-    get_all_leads,
-    get_leads_by_status,
-    update_status,
     delete_lead,
+    embed_text,
+    ensure_collections_initialized,
+    get_all_leads,
+    get_lead_by_id,
+    get_leads_by_status,
     search_leads,
-    DEDUP_SIMILARITY_THRESHOLD,
+    update_status,
+    upsert_lead,
 )
 
 pytestmark = pytest.mark.skipif(
@@ -51,8 +48,12 @@ def sample_lead() -> Lead:
 class TestEmbedText:
     def test_embed_text_format(self):
         lead = Lead(
-            source="test", tier=1, title="Hello World",
-            url="https://x.com", raw_text="C++ DSP", niche="plugin_dev",
+            source="test",
+            tier=1,
+            title="Hello World",
+            url="https://x.com",
+            raw_text="C++ DSP",
+            niche="plugin_dev",
         )
         result = embed_text(lead)
         assert "hello world" in result
@@ -74,7 +75,7 @@ class TestCRUD:
         upsert_lead(sample_lead)
         all_leads = get_all_leads()
         assert len(all_leads) >= 1
-        ids = [str(l.id) for l in all_leads]
+        ids = [str(lead.id) for lead in all_leads]
         assert str(sample_lead.id) in ids
 
     def test_get_leads_by_status(self, sample_lead):
@@ -82,7 +83,7 @@ class TestCRUD:
         upsert_lead(sample_lead)
         new_leads = get_leads_by_status(LeadStatus.NEW)
         assert len(new_leads) >= 1
-        assert any(str(l.id) == str(sample_lead.id) for l in new_leads)
+        assert any(str(lead.id) == str(sample_lead.id) for lead in new_leads)
 
     def test_update_status(self, sample_lead):
         upsert_lead(sample_lead)
@@ -127,13 +128,19 @@ class TestDedup:
     def test_unique_not_detected(self):
         """Completely different content should NOT be detected as duplicate."""
         lead1 = Lead(
-            source="test", tier=1, title="C++ DSP Developer",
-            url="https://example.com/a", raw_text="Real-time audio plugin development",
+            source="test",
+            tier=1,
+            title="C++ DSP Developer",
+            url="https://example.com/a",
+            raw_text="Real-time audio plugin development",
             niche="plugin_dev",
         )
         lead2 = Lead(
-            source="test", tier=1, title="Python Web Developer",
-            url="https://example.com/b", raw_text="Building Django web applications with React frontend",
+            source="test",
+            tier=1,
+            title="Python Web Developer",
+            url="https://example.com/b",
+            raw_text=("Building Django web applications with React frontend"),
             niche="plugin_dev",
         )
         upsert_lead(lead1)

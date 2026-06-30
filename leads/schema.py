@@ -6,15 +6,14 @@ Loads configurable values from .env with sensible defaults.
 import os
 import re
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
-from typing import Literal, Optional
-
-from pydantic import BaseModel, Field, field_validator
+from typing import Literal
 
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field, field_validator
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -34,7 +33,7 @@ def _parse_niches(raw: str | None) -> list[str]:
 PREFERRED_NICHES: list[str] = _parse_niches(os.getenv("PREFERRED_NICHES"))
 
 
-class LeadStatus(str, Enum):
+class LeadStatus(StrEnum):
     NEW = "NEW"
     SCORED = "SCORED"
     HOT = "HOT"
@@ -59,7 +58,7 @@ class Lead(BaseModel):
     source: str
     tier: int = Field(ge=1, le=4)
     title: str
-    company: Optional[str] = None
+    company: str | None = None
     url: str
     raw_text: str
     niche: str
@@ -67,10 +66,10 @@ class Lead(BaseModel):
     score: int = 0
     verdict: Verdict = "COLD"
     status: LeadStatus = LeadStatus.NEW
-    contact_path: Optional[str] = None
-    discovered_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
-    last_updated: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
-    notes: Optional[str] = None
+    contact_path: str | None = None
+    discovered_at: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
+    notes: str | None = None
 
     @field_validator("niche")
     @classmethod
@@ -103,7 +102,7 @@ class RawCandidate:
     title: str
     url: str
     snippet: str
-    company: Optional[str] = None
+    company: str | None = None
     raw_text: str = ""
     tier: int = 1
 

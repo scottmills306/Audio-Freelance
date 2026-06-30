@@ -3,28 +3,24 @@
 All configurable values load from .env with fallback defaults.
 """
 
+import contextlib
 import json
 import os
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-
 from leads.schema import Lead, LeadStatus
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # ── Config from environment (with fallback defaults) ──
 
-CHROMA_COLLECTION_LEADS: str = os.getenv(
-    "CHROMA_COLLECTION_LEADS", "freelance_leads"
-)
-CHROMA_COLLECTION_OUTREACH: str = os.getenv(
-    "CHROMA_COLLECTION_OUTREACH", "freelance_outreach_log"
-)
+CHROMA_COLLECTION_LEADS: str = os.getenv("CHROMA_COLLECTION_LEADS", "freelance_leads")
+CHROMA_COLLECTION_OUTREACH: str = os.getenv("CHROMA_COLLECTION_OUTREACH", "freelance_outreach_log")
 EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
 _raw_threshold = os.getenv("DEDUP_SIMILARITY_THRESHOLD", "0.92")
@@ -72,26 +68,21 @@ def _init() -> None:
 
     # Try Ollama first, fall back to local sentence-transformers
     embedding_fn = None
-    try:
+    with contextlib.suppress(Exception):
         from chromadb.utils import embedding_functions
 
         if check_ollama_available():
             embedding_fn = embedding_functions.OllamaEmbeddingFunction(
                 model_name=EMBEDDING_MODEL,
             )
-    except Exception:
-        pass
 
     if embedding_fn is None:
-        try:
+        with contextlib.suppress(Exception):
             from chromadb.utils import embedding_functions
 
             embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
                 model_name="all-MiniLM-L6-v2"
             )
-        except Exception:
-            # Absolute last resort: chromadb default (token count)
-            pass
 
     client = chromadb.PersistentClient(
         path=str(_DATA_DIR),
@@ -125,7 +116,7 @@ def embed_text(lead: Lead) -> str:
     return text
 
 
-def check_duplicate(lead: Lead) -> Optional[str]:
+def check_duplicate(lead: Lead) -> str | None:
     """Query nearest neighbor; return existing lead id if cosine similarity >= threshold."""
     _init()
     text = embed_text(lead)
@@ -188,8 +179,12 @@ def _metadata_to_lead(metadata: dict) -> Lead:
         verdict=metadata.get("verdict", "COLD"),
         status=LeadStatus(metadata.get("status", "NEW")),
         contact_path=metadata.get("contact_path") or None,
-        discovered_at=datetime.fromisoformat(metadata.get("discovered_at", datetime.now(tz=timezone.utc).isoformat())),
-        last_updated=datetime.fromisoformat(metadata.get("last_updated", datetime.now(tz=timezone.utc).isoformat())),
+        discovered_at=datetime.fromisoformat(
+            metadata.get("discovered_at", datetime.now(tz=UTC).isoformat())
+        ),
+        last_updated=datetime.fromisoformat(
+            metadata.get("last_updated", datetime.now(tz=UTC).isoformat())
+        ),
         notes=metadata.get("notes") or None,
     )
 
@@ -199,7 +194,7 @@ def _metadata_to_lead(metadata: dict) -> Lead:
 
 def upsert_lead(lead: Lead) -> None:
     _init()
-    lead.last_updated = datetime.now(tz=timezone.utc)
+    lead.last_updated = datetime.now(tz=UTC)
     text = embed_text(lead)
     metadata = _lead_to_metadata(lead)
 
@@ -231,7 +226,7 @@ def get_all_leads() -> list[Lead]:
     return [_metadata_to_lead(m) for m in results["metadatas"]]
 
 
-def get_lead_by_id(lead_id: str | uuid.UUID) -> Optional[Lead]:
+def get_lead_by_id(lead_id: str | uuid.UUID) -> Lead | None:
     _init()
     lead_id = str(lead_id)
     results = _leads_collection.get(
@@ -264,7 +259,7 @@ def update_status(lead_id: uuid.UUID | str, new_status: LeadStatus) -> None:
         metadatas=[
             {
                 "status": new_status.value,
-                "last_updated": datetime.now(tz=timezone.utc).isoformat(),
+                "last_updated": datetime.now(tz=UTC).isoformat(),
             }
         ],
     )
@@ -286,14 +281,14 @@ def log_outreach(
 ) -> None:
     _init()
     _outreach_collection.add(
-        ids=[f"{lead_id}_{datetime.now(tz=timezone.utc).isoformat()}"],
+        ids=[f"{lead_id}_{datetime.now(tz=UTC).isoformat()}"],
         documents=[draft_text],
         metadatas=[
             {
                 "lead_id": lead_id,
                 "template_used": template_used,
                 "status": status,
-                "created_at": datetime.now(tz=timezone.utc).isoformat(),
+                "created_at": datetime.now(tz=UTC).isoformat(),
             }
         ],
     )

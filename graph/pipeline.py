@@ -5,14 +5,17 @@ LangGraph wrapper provided for future graph-based extensions.
 """
 
 import asyncio
+import contextlib
 from typing import Any
 
+from langgraph.graph import END, START, StateGraph
+
 from graph.state import PipelineState
-from leads.schema import Lead, LeadStatus
+from leads.schema import Lead
 from leads.store import check_duplicate, upsert_lead
+from scoring.score import score_candidate
 from search import run_tier1, run_tier2, run_tier3, run_tier4
 from search.base import RawCandidate
-from scoring.score import score_candidate
 
 
 async def run_pipeline(niche: str, max_per_tier: int = 10) -> PipelineState:
@@ -95,10 +98,9 @@ async def run_pipeline(niche: str, max_per_tier: int = 10) -> PipelineState:
         else:
             skipped.append(lead)
 
-        try:
+        with contextlib.suppress(Exception):
+            # Continue even if storage fails - we still return the lead
             upsert_lead(lead)
-        except Exception:
-            pass
 
     state["leads"] = leads
     state["hot_leads"] = hot
@@ -110,8 +112,6 @@ async def run_pipeline(niche: str, max_per_tier: int = 10) -> PipelineState:
 
 
 # ── LangGraph wrapper (kept for future graph extensions) ──
-
-from langgraph.graph import StateGraph, START, END
 
 
 def build_pipeline() -> StateGraph:

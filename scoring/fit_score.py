@@ -1,7 +1,6 @@
 """Tier 4 company fit-score for outbound target qualification."""
 
 import re
-from typing import Optional
 
 from search.base import RawCandidate
 

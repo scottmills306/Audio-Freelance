@@ -21,10 +21,12 @@ def setup_logger(name: str, level: str | None = None) -> logging.Logger:
 
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(logging.Formatter(
-            fmt="%(asctime)s  %(levelname)-7s  %(name)s  %(message)s",
-            datefmt="%H:%M:%S",
-        ))
+        handler.setFormatter(
+            logging.Formatter(
+                fmt="%(asctime)s  %(levelname)-7s  %(name)s  %(message)s",
+                datefmt="%H:%M:%S",
+            )
+        )
         logger.addHandler(handler)
 
     return logger

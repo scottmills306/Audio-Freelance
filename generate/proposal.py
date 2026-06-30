@@ -1,9 +1,8 @@
 """Structured proposal generator with pricing tiers and IP licensing notes."""
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 from leads.schema import Lead
 
@@ -30,7 +29,7 @@ def generate_proposal(
     client_name: str,
     scope: str,
     deliverables: list[str],
-    out_of_scope: Optional[list[str]] = None,
+    out_of_scope: list[str] | None = None,
     estimated_tier: str = "medium",
     niche: str = "cpp_plugin_contract",
 ) -> dict:
@@ -43,12 +42,10 @@ def generate_proposal(
 
     if estimated_tier not in PRICING_TIERS:
         estimated_tier = "medium"
-    tier_min, tier_max, tier_desc = PRICING_TIERS.get(
-        estimated_tier, PRICING_TIERS["medium"]
-    )
+    tier_min, tier_max, tier_desc = PRICING_TIERS.get(estimated_tier, PRICING_TIERS["medium"])
     anchor = RATE_ANCHORS.get(niche, RATE_ANCHORS["cpp_plugin_contract"])
 
-    date_str = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
+    date_str = datetime.now(tz=UTC).strftime("%Y-%m-%d")
     safe_name = re.sub(r"[^a-zA-Z0-9_-]", "", client_name.lower().replace(" ", "_"))
     if not safe_name:
         safe_name = "client"
@@ -134,5 +131,5 @@ Reply **APPROVED** to start. First milestone (scoping + architecture doc) delive
         "investment_range": f"${tier_min:,} – ${tier_max:,} CAD",
         "payment_terms": "50/50 split (50% upfront deposit)",
         "ip_note": "Underlying engines/tooling are LICENSED, not assigned.",
-        "generated_at": datetime.now(tz=timezone.utc).isoformat(),
+        "generated_at": datetime.now(tz=UTC).isoformat(),
     }

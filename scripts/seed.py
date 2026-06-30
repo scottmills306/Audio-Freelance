@@ -2,14 +2,14 @@
 
 Uses entirely synthetic data — no real companies, URLs, or contacts.
 """
+
 import os
 import sys
-from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from leads.schema import Lead, LeadStatus
-from leads.store import upsert_lead, ensure_collections_initialized
+from leads.store import ensure_collections_initialized, upsert_lead
 
 SAMPLE_LEADS = [
     {
